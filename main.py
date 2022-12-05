@@ -4,7 +4,6 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from schemas import Response
 from bson.objectid import ObjectId
 
 import uvicorn
@@ -12,8 +11,10 @@ import settings
 import api
 
 from routers import (
+    home,
     illnesses,
-    rules
+    rules,
+    diagnosis
 )
 
 
@@ -38,45 +39,9 @@ app.add_middleware(
 )
 
 app.include_router(illnesses.router)
-app. include_router(rules.router)
-
-@app.get('/')
-def read_root():
-    return {"code": 200, 'msg': "Api all ready!"}
-
-
-# diagnosis
-@app.post('/diagnosis')
-async def diagnosis(request: Request):
-    json_data = await request.json()
-
-    query={}
-    facts = []
-    symptoms = []
-    rules = []
-
-    for symptom in json_data.get('symptoms'):
-        symptoms.append([symptom, 'person'])
-
-    rules_db = mydb.rules.find(query)
-    for rule_db in rules_db:
-        d=[rule_db.get('symptoms'), rule_db.get('illnesses_id')]
-        rules.append(d)
-
-    results = api.check_assert(rules, symptoms)
-    for item in results.get("facts"):
-        if item not in symptoms:
-            facts.append(item)
-    facts_id = []
-    for fact in facts:
-        facts_id.append(ObjectId(fact[0]))
-    
-    query = {'_id': {'$in': facts_id}}
-    illnesses_db = list(mydb.illnesses.find(query))
-
-    response = Response(code=200, msg='success', results=illnesses_db).dict()
-    return response
-# ===
+app.include_router(rules.router)
+app.include_router(diagnosis.router)
+app.include_router(home.router)
 
 
 if __name__ == "__main__":

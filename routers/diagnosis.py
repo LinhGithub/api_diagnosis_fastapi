@@ -4,18 +4,13 @@ from schemas import Response
 from bson.objectid import ObjectId
 from schemas import Response
 
-import api
+import utils
 
 router = APIRouter(
     tags=["diagnosis"]
 )
 
-mydb = api.mydb
-
-
-@router.get('/')
-def read_root():
-    return {"code": 200, 'msg': "Api all ready!"}
+mydb = utils.mydb
 
 # diagnosis
 @router.post('/diagnosis')
@@ -35,7 +30,7 @@ async def diagnosis(request: Request):
         d=[rule_db.get('symptoms'), rule_db.get('illnesses_id')]
         rules.append(d)
 
-    results = api.check_assert(rules, symptoms)
+    results = utils.check_assert(rules, symptoms)
     for item in results.get("facts"):
         if item not in symptoms:
             facts.append(item)

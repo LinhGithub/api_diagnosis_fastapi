@@ -1,19 +1,23 @@
-from fastapi import APIRouter, Form
+from fastapi import Request,APIRouter, Form
 from fastapi.param_functions import Query
+from fastapi.responses import FileResponse
 from schemas import Response
 from bson.objectid import ObjectId
+import utils
+from typing import Union
+import os
 
-import api
+import schemas
 
 router = APIRouter(
     tags=["illnesses"]
 )
 
-mydb = api.mydb
+mydb = utils.mydb
 
 # illnesses
 @router.get("/illnesses")
-def get_illnesess(type: str = Query(None), rule: str = Query(None)):
+def get_illnesess(type: str = Query(None), rule: str = Query(None), page: int = Query(None), page_size: int = Query(None)):
     query = {}
     if type:
         query['type'] = type
@@ -22,7 +26,11 @@ def get_illnesess(type: str = Query(None), rule: str = Query(None)):
     if type and rule:
         query = {"$or": [{"type": type}, {"rule": rule}]}
 
-    illnesses = mydb.illnesses.find(query)
+    if page and page_size:
+        illnesses = mydb.illnesses.find(query).skip((page - 1) * page_size).limit(page_size)
+    else:
+        illnesses = mydb.illnesses.find(query)
+
     total = mydb.illnesses.count_documents(query)
 
     response = Response(results=list(
@@ -30,8 +38,37 @@ def get_illnesess(type: str = Query(None), rule: str = Query(None)):
     return response
 
 
+# get item by ids
+@router.post('/illnesses/ids')
+async def get_by_ids (req: schemas.Item):
+    list_ids = req.list_ids
+    queryObj = {}
+    if list_ids:
+        queryIll = {}
+        queryObj["symptoms"] = { "$elemMatch": { "$in": list_ids } }
+        rules = mydb.rules.distinct("symptoms", queryObj)
+        ill_obj = []
+        for r in rules:
+            if r not in list_ids:
+                ill_obj.append(ObjectId(r))
+
+        queryIll["_id"] = { "$in": ill_obj }
+
+        illnesses = mydb.illnesses.find(queryIll)
+    else:
+        queryObj = { "$or": [{ "type": "symptom" }, { "rule": "both" }] }
+        illnesses = mydb.illnesses.find(queryObj)
+
+    response = Response(results=list(
+        illnesses), code=200, msg="success").dict()
+    return response
+
+
 @router.post('/illnesses')
-async def illnesses_create(name: str = Form(None), type: str = Form(None), rule: str = Form(None)):
+async def illnesses_create(req: schemas.FormIllness):
+    name = req.name
+    type = req.type
+    rule = req.rule
     illnesse = mydb.illnesses.find_one({"name": name})
 
     if not illnesse:
@@ -39,7 +76,7 @@ async def illnesses_create(name: str = Form(None), type: str = Form(None), rule:
             "name": name,
             "type": type,
             "rule": rule,
-            "created_at": api.get_now(),
+            "created_at": utils.get_now(),
         }
 
         x = mydb.illnesses.insert_one(insert_data)
@@ -54,7 +91,9 @@ async def illnesses_create(name: str = Form(None), type: str = Form(None), rule:
 
 
 @router.put('/illnesses/{id}')
-async def illnesses_update(id, name: str = Form(None), rule: str = Form(None)):
+async def illnesses_update(id, req: schemas.FormIllness):
+    name = req.name
+    rule = req.rule
     filter = {'_id': ObjectId(id)}
     illnesse = mydb.illnesses.find_one({"name": name ,'_id': {'$ne': ObjectId(id)}})
     if not illnesse:
@@ -63,7 +102,7 @@ async def illnesses_update(id, name: str = Form(None), rule: str = Form(None)):
             "$set":{
                 'name': name,
                 "rule": rule,
-                "updated_at": api.get_now(),
+                "updated_at": utils.get_now(),
             }
         }
         if illnesse:
@@ -95,4 +134,9 @@ async def illnesses_delete(id):
         response = Response(code=0, msg='Không thể xóa, nó đã được gắn kết với luật').dict()
 
     return response
-# ===
+
+@router.get('/illnesses/dowload_file')
+async def export_file():
+    file_name = "test.txt"
+    some_file_path = os.getcwd() + "/storage/" + file_name
+    return FileResponse(some_file_path, filename=some_file_path, media_type='.txt')

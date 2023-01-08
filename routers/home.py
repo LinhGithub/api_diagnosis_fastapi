@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 
-import api
+import utils
 
 router = APIRouter(
-    tags=["diagnosis"]
+    tags=["home"]
 )
 
-mydb = api.mydb
+mydb = utils.mydb
 
 
 @router.get('/')

@@ -8,13 +8,14 @@ from bson.objectid import ObjectId
 
 import uvicorn
 import settings
-import api
+import utils
 
 from routers import (
     home,
     illnesses,
     rules,
-    diagnosis
+    diagnosis,
+    login
 )
 
 
@@ -22,7 +23,7 @@ app = FastAPI(
     title="Expert system"
 )
 
-mydb = api.mydb
+mydb = utils.mydb
 
 @app.exception_handler(Exception)
 async def validation_exception_handler(request, err):
@@ -42,6 +43,7 @@ app.include_router(illnesses.router)
 app.include_router(rules.router)
 app.include_router(diagnosis.router)
 app.include_router(home.router)
+app.include_router(login.router)
 
 
 if __name__ == "__main__":

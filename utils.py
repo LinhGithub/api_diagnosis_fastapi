@@ -1,5 +1,8 @@
 from mongo_connect import mongo_create
 from datetime import datetime, timedelta
+import os
+import xlsxwriter
+
 
 mydb = mongo_create()
 
@@ -46,3 +49,18 @@ def check_assert(rules, facts):
 
 def get_now():
     return datetime.now() + timedelta(hours=7)
+
+def export_excel(filename, list_cus):
+    basedir = os.getcwd()
+    # Create a workbook and add a worksheet.
+    file_path = basedir+'/storage'
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)
+    workbook = xlsxwriter.Workbook(basedir+'/storage/'+filename+'.xlsx')
+    worksheet = workbook.add_worksheet()
+
+    for row_num, data in enumerate(list_cus):
+        worksheet.write_row(row_num, 0, data)
+
+    workbook.close()
+    return True

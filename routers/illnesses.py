@@ -14,7 +14,6 @@ router = APIRouter(
 )
 
 mydb = utils.mydb
-
 # illnesses
 @router.get("/illnesses")
 def get_illnesess(type: str = Query(None), rule: str = Query(None), page: int = Query(None), page_size: int = Query(None)):
@@ -135,8 +134,57 @@ async def illnesses_delete(id):
 
     return response
 
-@router.get('/illnesses/dowload_file')
-async def export_file():
-    file_name = "test.txt"
-    some_file_path = os.getcwd() + "/storage/" + file_name
-    return FileResponse(some_file_path, filename=some_file_path, media_type='.txt')
+@router.get('/illnesses/download_file')
+async def download_file(type: str = Query(None)):
+    if type:
+        if type in ["illness", "symptom", 'rule']:
+            if type == "illness":
+                name = "illnesses"
+            elif type == "symptom":
+                name = "symptoms"
+            else:
+                name = "rules"
+
+            file_name = name + ".xlsx"
+            _path = os.getcwd() + "/storage/" + file_name
+            if os.path.isfile(_path):
+                os.remove(_path)
+
+            if type in ["illness", "symptom"]:
+                header = ['num', "_id", "name", "rule", "type"]
+                _list = []
+                illnesses = mydb.illnesses.find({'type': type})
+                index = 0
+                for illn in illnesses:
+                    index += 1
+                    illness = []
+                    illness.append(index)
+                    illness.append(str(illn.get('_id')))
+                    illness.append(str(illn.get('name')))
+                    illness.append(str(illn.get('rule')))
+                    illness.append(str(illn.get('type')))
+                    _list.append(illness)
+
+                _list.insert(0,header)
+                utils.export_excel(name,_list)
+            else:
+                header = ['num', "_id", "illnesses_id", "symptoms"]
+                _list = []
+                rules = mydb.rules.find()
+                index = 0
+                for r in rules:
+                    index += 1
+                    rule = []
+                    rule.append(index)
+                    rule.append(str(r.get('_id')))
+                    rule.append(str(r.get('illnesses_id')))
+                    rule.append(', '.join(r.get('symptoms')))
+                    _list.append(rule)
+
+                _list.insert(0,header)
+                utils.export_excel(name,_list)
+
+            if os.path.isfile(_path):
+                return Response(code=200, msg='Thành công', file_name=file_name).dict()
+
+    return Response(code=0, msg='Thất bại').dict()

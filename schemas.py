@@ -37,8 +37,9 @@ class Response(BaseModel):
     results: List = None
     id: str = None
     refreshToken: str = None
-    accessToken: str =None
+    accessToken: str = None
     role: str = None
+    file_name: str = None
 
     def dict(self, *args, **kwargs) -> Dict[str, Any]:
         return super().dict(*args, exclude_none=True, **kwargs)

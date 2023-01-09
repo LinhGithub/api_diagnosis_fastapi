@@ -1,10 +1,7 @@
-from typing import Union
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from bson.objectid import ObjectId
+from fastapi.staticfiles import StaticFiles
 
 import uvicorn
 import settings
@@ -45,6 +42,7 @@ app.include_router(diagnosis.router)
 app.include_router(home.router)
 app.include_router(login.router)
 
+app.mount("/storage", StaticFiles(directory="storage"), name="storage")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host=settings.HOST, port=8000, reload=True)
